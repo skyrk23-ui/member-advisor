@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Member, Message } from '@/lib/types';
+import { getChatHistory, saveChatHistory, clearChatHistory } from '@/lib/storage';
 
 interface Props {
   member: Member;
@@ -22,6 +23,10 @@ export default function ChatInterface({ member }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setMessages(getChatHistory(member.id));
+  }, [member.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,6 +66,11 @@ export default function ChatInterface({ member }: Props) {
           return updated;
         });
       }
+
+      setMessages((prev) => {
+        saveChatHistory(member.id, prev);
+        return prev;
+      });
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -77,6 +87,11 @@ export default function ChatInterface({ member }: Props) {
       e.preventDefault();
       sendMessage(input);
     }
+  }
+
+  function handleClear() {
+    clearChatHistory(member.id);
+    setMessages([]);
   }
 
   return (
@@ -136,17 +151,27 @@ export default function ChatInterface({ member }: Props) {
       {/* Input area */}
       <div className="border-t border-gray-100 bg-white p-4">
         {messages.length > 0 && (
-          <div className="flex gap-2 mb-3 flex-wrap">
-            {SUGGESTED_QUESTIONS.slice(0, 2).map((q) => (
-              <button
-                key={q}
-                onClick={() => sendMessage(q)}
-                disabled={isLoading}
-                className="text-xs text-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-full px-3 py-1 transition disabled:opacity-50"
-              >
-                {q}
-              </button>
-            ))}
+          <div className="flex gap-2 mb-3 flex-wrap items-center justify-between">
+            <div className="flex gap-2 flex-wrap">
+              {SUGGESTED_QUESTIONS.slice(0, 2).map((q) => (
+                <button
+                  key={q}
+                  onClick={() => sendMessage(q)}
+                  disabled={isLoading}
+                  className="text-xs text-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-full px-3 py-1 transition disabled:opacity-50"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleClear}
+              disabled={isLoading}
+              className="text-xs text-gray-400 hover:text-red-500 transition disabled:opacity-50 whitespace-nowrap"
+              title="会話をリセット"
+            >
+              会話をリセット
+            </button>
           </div>
         )}
         <div className="flex gap-2 items-end">
